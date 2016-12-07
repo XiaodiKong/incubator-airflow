@@ -109,14 +109,19 @@ class MySqlToHiveTransfer(BaseOperator):
 
         logging.info("Dumping MySQL query results to local file")
         conn = mysql.get_conn()
-        cursor = conn.cursor()
+        cursor = conn.cursor(MySQLdb.cursors.SSCursor)
         cursor.execute(self.sql)
         with NamedTemporaryFile("wb") as f:
             csv_writer = csv.writer(f, delimiter=self.delimiter, encoding="utf-8")
             field_dict = OrderedDict()
             for field in cursor.description:
                 field_dict[field[0]] = self.type_map(field[1])
-            csv_writer.writerows(cursor)
+            # csv_writer.writerows(cursor)
+            while True:
+                row = cursor.fetchone()
+                if not row:
+                    break
+                csv_writer.writerow(row)
             f.flush()
             cursor.close()
             conn.close()
